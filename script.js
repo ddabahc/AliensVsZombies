@@ -4,11 +4,20 @@ canvas.width = 900;
 canvas.height = 600; 
 
 // variables
+let enemiesInterval = 100
+let numberOfResources = 300
+let frame = 0
+let gameOver = false
+let score = 0;
+const winningScore = 10 
 const  cellSize = 100;
 const celdaEspacio = 3;
 const gameGrid = [];
 const defenders = []
-let numberOfResources = 300
+const enemies = []
+const enemyPositions = []
+const projectiles = [];
+const resources = []
 //mouse
 const mouse = {
     x: 10,
@@ -69,57 +78,288 @@ createGrid();
 
 
 // balas
+class Projectile{
+    constructor(x,y){
+        this.x = x
+        this.y = y
+        this.width = 10
+        this.height = 10;
+        this.power = 50
+        this.speed = 15
+    }
+    update(){
+        this.x += this.speed;
+    }
+    draw(){
+        ctx.fillStyle= "black"
+        ctx.beginPath ()
+        ctx.arc(this.x,this.y,this.width,0,Math.PI *2)
+        ctx.fill()
+        
+    }
+}
+
+function handleProjectiles (){
+    for (let i = 0;i < projectiles.length;i++){
+        projectiles[i].update();
+        projectiles[i].draw();
+
+
+        for (let j = 0; j < enemies.length; j++){
+            if (enemies[j] && projectiles[i]&& collision(projectiles[i], enemies [j]))
+            {
+                enemies [j].health -= projectiles[i].power;
+                projectiles.splice(i,1);
+                i--
+            }
+        }
+
+        if (projectiles[i]&& projectiles[i].x > canvas.width - cellSize ){
+            projectiles.splice(i,1);
+            i--;
+        }
+    }
+}
 //defenders
 class Defender {
     constructor(x,y){
         this.x = x;
         this.y = y;
-        this.width = cellSize;
-        this.height = cellSize;
+        this.width = cellSize - celdaEspacio *2;
+        this.height = cellSize - celdaEspacio *2;
         this.shooting = false;
         this.health = 100;
-        this.balas = [];
+        this.projectiles = [];
         this.timer = 0;
     }
     draw(){
         ctx.fillStyle = "blue"
         ctx.fillRect(this.x,this.y,this.width,this.height);
         ctx.fillStyle = "gold";
-        ctx.font = '20px Arial';
-        ctx.fillText(Math.floor(this.health),this.x,this.y)
+        ctx.font = '20px Orbitron';
+        ctx.fillText(Math.floor(this.health),this.x + 15 ,this.y +30)
+    }
+    update(){
+        if(this.shooting){
+            this.timer++;
+            if (this.timer % 100 === 0 ){
+                projectiles.push(new Projectile(this.x + 50,this.y+50))
+            }
+        } else{
+            this.timer = 0
+        }
+       
     }
 }
-canvas.addEventListener("click",function(){
-    const gridPositionX = mouse.x - (mouse.x % cellSize); 
-    const gridPositionY = mouse.y - (mouse.y % cellSize)
-   
-   // si alguien intenta poner algo en el navbar no se va a poder. 
-    if (gridPositionY< cellSize) return;
-    let defenderCost = 100
-    if (numberOfResources > defenderCost){
-        defenders.push(new Defender(gridPositionX,gridPositionY))
-        numberOfResources -= defenderCost;
-    }
 
-});
 
 
 function handleDefenders (){
     for (let i = 0; i < defenders.length; i++){
-        
+        defenders[i].draw();
+        defenders[i].update();
+        if (enemyPositions.indexOf(defenders[i].y)!==-1){
+            defenders[i].shooting = true
+        }else{
+            defenders[i].shooting = false
+        }
+        for(let j = 0; j <enemies.length; j++){
+           if (defenders[i] && collision(defenders[i],enemies[j])){
+               enemies[j].movement = 0
+               defenders[i].health -= 0.2
+           }
+           if (defenders[i] && defenders[i].health <= 0){
+               defenders.splice(i,1 );
+               i--;
+               enemies[j].movement = enemies[j].speed;
+
+           }
+        }
     }
 }
 
-
+// floating messages
+const floatingMessages = []
+class floatingMessage{
+    constructor(value,x,y,size,color){
+        this.value = value;
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.lifeSpan = 0;
+        this.color = color; 
+        this.opacity = 1;
+    }
+    update(){
+        this.y -= 0.3
+        this.lifeSpan +=1;
+        if (this.opacity > 0.03 ) this.opacity -=0.03
+    }
+    draw(){
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.color;
+        ctx.font = this.size + "px Orbitron"
+        ctx.fillText(this.value,this.x,this.y)
+        ctx.globalAlpha = 1;
+    }
+}
+function handleFloatingMessages (){
+    for(let i = 0; i < floatingMessages.length; i++){
+        floatingMessages[i].update();
+        floatingMessages[i].draw();
+        if(floatingMessages[i].lifeSpan >=50){
+            floatingMessages.splice(i,1)
+            i--;
+        }
+    }
+}
 // enemies 
+class Enemy {
+    constructor(verticalPosition){
+        this.x = canvas.width;
+        this.y = verticalPosition;
+        this.width = cellSize - celdaEspacio*2 ;
+        this.height = cellSize -celdaEspacio*2;
+        this.speed = Math.random()*0.2 + 0.4
+        this.movement = this.speed;
+        this.health = 100;
+        this.maxHealth= this.health;
+        
+    }
+
+    update(){
+        this.x -= this.movement
+    }
+    draw(){
+        ctx.fillStyle= 'red'
+        ctx.fillRect(this.x,this.y,this.width,this.height)
+        ctx.fillStyle = "black";
+        ctx.font = '30px Orbitron';
+        ctx.fillText(Math.floor(this.health),this.x + 15 ,this.y +30)
+    }
+}
+
+function generateEnemies(){
+    for (let i=0; i < enemies.length; i++){
+        enemies[i].update();
+        enemies[i].draw();
+        if (enemies[i].x < 0){
+            gameOver= true;
+        }
+        if (enemies[i].health <= 0){
+            let gainedResources = enemies[i].maxHealth/10;
+            floatingMessages.push(new floatingMessage("+"+ gainedResources,enemies[i].x,enemies[i].y,30,"black"))
+            floatingMessages.push(new floatingMessage("+"+ gainedResources,250,50,30,"gold"))
+
+            numberOfResources += gainedResources;
+            score += gainedResources
+            const findIndex = enemyPositions.indexOf(enemies[i].y)
+            enemyPositions.splice(findIndex,1);
+            enemies.splice(i,1);
+            i--
+            console.log (enemyPositions)
+        }
+    }
+    if(frame % enemiesInterval === 0 && score < winningScore){
+        let verticalPosition= Math.floor(Math.random()* 5 +1)*cellSize + celdaEspacio ;
+        enemies.push(new Enemy(verticalPosition))
+        enemyPositions.push(verticalPosition)
+        if (enemiesInterval > 120) enemiesInterval -= 50;
+    }
+}
 // resources
+const amounts = [20,30,40]
+class Resource{
+    constructor(){
+        this.x = Math.random()* (canvas.width -cellSize)
+        this.y =(Math.floor( Math.random()*5)+1) * cellSize + 25;
+        this.width = cellSize * 0.6
+        this.height = cellSize *0.6
+        this.amount = amounts[Math.floor(Math.random()*amounts.length)]
+    }
+
+    draw(){
+        ctx.fillStyle = "yellow"
+        ctx.fillRect(this.x,this.y,this.width,this.height)
+        ctx.fillStyle = "black"
+        ctx.font = "20px Orbitron"
+        ctx.fillText(this.amount,this.x +15,this.y + 25);
+    }
+}
+function handleResources(){
+    if(frame % 500 === 0 && score < winningScore ){
+
+        resources.push(new Resource())
+
+    }
+    for(let i = 0; i< resources.length; i++){
+        resources[i].draw()
+        if (resources[i] && mouse.x && mouse.y && collision(resources[i],mouse)){
+            numberOfResources += resources[i].amount;
+            floatingMessages.push(new floatingMessage("+"+resources[i].amount,resources[i].x,resources[i].y,30,"black"))
+            floatingMessages.push(new floatingMessage("+" +resources[i].amount,250,50,20,"gold"))
+
+            resources.splice(i,1)
+            i--;
+        }
+    }
+}
 // utilities 
+
+function handleGameStatus (){
+    ctx.fillStyle = 'gold'
+    ctx.font = "30px Orbitron"
+    ctx.fillText(`Score: ` + score,20,35);
+    ctx.fillText(`Resources: ` + numberOfResources,20,80);
+
+    if(gameOver){
+        ctx.fillStyle = "black";
+        ctx.font = `90px Orbitron`;
+        ctx.fillText('GAME OVER', 135, 330)
+    }
+
+    if (score > winningScore && enemies.length === 0){
+        ctx.fillStyle = "black";
+        ctx.font = "60px Orbiton";
+        ctx.fillText("LEVEL COMPLETE",130,300);
+        ctx.font = "30px  Orbiton";
+        ctx.fillText("You Win with " +score + " points",134,340)
+    }
+
+}
+canvas.addEventListener("click",function(){
+    const gridPositionX = mouse.x - (mouse.x % cellSize) + celdaEspacio; 
+    const gridPositionY = mouse.y - (mouse.y % cellSize) + celdaEspacio;
+   
+   // si alguien intenta poner algo en el navbar no se va a poder. 
+    if (gridPositionY< cellSize) return;
+    for(let i = 0; i < defenders.length; i++){
+        if (defenders[i].x === gridPositionX && defenders [i].y === gridPositionY) return
+    }
+
+    let defenderCost = 100
+    if (numberOfResources >= defenderCost){
+        defenders.push(new Defender(gridPositionX,gridPositionY))
+        numberOfResources -= defenderCost;
+    }else{
+        floatingMessages.push(new floatingMessage("No sufficient resources",mouse.x,mouse.y,20,"blue"))
+    }
+
+});
 function animate(){
     ctx.clearRect(0,0,canvas.width,canvas.height)
     ctx.fillStyle = 'blue'; 
     ctx.fillRect(0,0,navBar.width,navBar.height)
     handleGameGrid()
-    requestAnimationFrame(animate);
+    handleDefenders()
+    handleProjectiles ()
+    generateEnemies()
+    handleResources ()
+    handleGameStatus()
+    handleFloatingMessages ()
+    
+    frame ++;
+   if (!gameOver) requestAnimationFrame(animate);
 }
 animate();
 
@@ -133,3 +373,8 @@ function collision (first,second){
         };
 
 };
+
+window.addEventListener("resize",function(){
+ canvasPosition = canvas.getBoundingClientRect();
+
+})
