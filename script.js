@@ -1,3 +1,7 @@
+window.onload = function(){
+
+
+
 const canvas=document.getElementById("canvas1");
 const ctx = canvas.getContext ("2d");
 canvas.width = 900;
@@ -9,6 +13,8 @@ let numberOfResources = 300
 let frame = 0
 let gameOver = false
 let score = 0;
+let choosenDefender = 1;
+
 const winningScore = 10 
 const  cellSize = 100;
 const celdaEspacio = 3;
@@ -18,14 +24,39 @@ const enemies = []
 const enemyPositions = []
 const projectiles = [];
 const resources = []
+
+//Background
+
+const bg = new Image()
+bg.src = "bg.jpg"
+
+class Background{
+    constructor(w,h){
+        this.x = 0
+        this.y = 0
+        this.width = w
+        this.height = h
+        
+    }
+    draw(){
+        ctx.drawImage(bg,this.x,this.y,this.width,this.height)
+    }
+}
+
 //mouse
 const mouse = {
     x: 10,
     y: 10,
     width: 0.1,
-    height:  0.1
+    height:  0.1,
+    clicked: false
 }
-
+canvas.addEventListener("mousedown",function(e){
+    mouse.clicked= true
+})
+canvas.addEventListener("mouseup",function(e){
+    mouse.clicked=false
+})
 let canvasPosition = canvas.getBoundingClientRect();
 canvas.addEventListener("mousemove", function(e){
     mouse.x = e.x -canvasPosition.left;
@@ -84,8 +115,8 @@ class Projectile{
         this.y = y
         this.width = 10
         this.height = 10;
-        this.power = 50
-        this.speed = 15
+        this.power = 10
+        this.speed = 25
     }
     update(){
         this.x += this.speed;
@@ -121,6 +152,13 @@ function handleProjectiles (){
     }
 }
 //defenders
+
+const defender1 = new Image()
+defender1.src = "defender1.png"
+const defender2 = new Image()
+defender2.src = "defender2.png"
+
+
 class Defender {
     constructor(x,y){
         this.x = x;
@@ -128,26 +166,59 @@ class Defender {
         this.width = cellSize - celdaEspacio *2;
         this.height = cellSize - celdaEspacio *2;
         this.shooting = false;
+        this.shootNow = false
         this.health = 100;
         this.projectiles = [];
         this.timer = 0;
+        this.frameX = 0
+        this.frameY = 0
+        this.spriteWidth = 194
+        this.spriteHeight = 194
+        this.minFrame = 0;
+        this.maxFrame =16;
+        this.choosenDefender= choosenDefender
     }
     draw(){
-        ctx.fillStyle = "blue"
-        ctx.fillRect(this.x,this.y,this.width,this.height);
-        ctx.fillStyle = "gold";
+       // ctx.fillStyle = "blue"
+       // ctx.fillRect(this.x,this.y,this.width,this.height);
+        ctx.fillStyle = "black";
         ctx.font = '20px Orbitron';
         ctx.fillText(Math.floor(this.health),this.x + 15 ,this.y +30)
+        if (this.choosenDefender === 1){
+            ctx.drawImage(defender1,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height)
+        } else if (this.choosenDefender===2){
+            ctx.drawImage(defender2,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height)
+        }
     }
     update(){
-        if(this.shooting){
-            this.timer++;
-            if (this.timer % 100 === 0 ){
-                projectiles.push(new Projectile(this.x + 50,this.y+50))
-            }
-        } else{
-            this.timer = 0
+        if(frame % 10 === 0){
+        if (this.frameX < this.maxFrame)this.frameX++
+        else this.frameX = this.minFrame
+        if (this.frameX === 15) this.shootNow = true
         }
+
+        if( choosenDefender === 1) {
+            if(this.shooting){
+                this.minFrame = 0
+                this.maxFrame = 16 
+            }else{
+                this.minFrame = 17
+                this.maxFrame = 24
+            }
+        }else if (this.choosenDefender===2){
+            if(this.shooting){
+                this.minFrame = 13
+                this.maxFrame = 28
+            }else{
+                this.minFrame = 0
+                this.maxFrame = 12
+            }
+        }
+      
+        if(this.shooting && this.shootNow){
+         projectiles.push(new Projectile(this.x + 50,this.y +35))
+        this.shootNow = false 
+        } 
        
     }
 }
@@ -178,6 +249,61 @@ function handleDefenders (){
     }
 }
 
+const card1 = {
+    x: 10,
+    y: 10,
+    width: 70,
+    height:85
+
+}
+const card2 = {
+    x: 90,
+    y: 10,
+    width: 70,
+    height:85
+
+}
+
+
+
+function chooseDefenders(){
+    let card1stroke = "black";
+    let card2stroke = "black";
+    if (collision(mouse,card1)&& mouse.clicked){
+        choosenDefender=1
+    }else if(collision(mouse,card2)&& mouse.clicked){
+        choosenDefender=2
+    }
+
+
+
+    if(choosenDefender === 1){
+        card1stroke = 'gold';
+        card2stroke = 'black';
+
+    }else if(choosenDefender === 2){
+        card1stroke = 'black';
+        card2stroke = 'gold';
+
+    }else{
+        card1stroke = "black";
+        card2stroke = "black";
+
+    }
+    
+    ctx.lineWidth = 1
+    ctx.fillStyle = "rgba(0,0,0,0.2)"
+    ctx.fillRect(card1.x,card1.y,card1.width,card1.height)
+    ctx.strokeStyle = card1stroke
+    ctx.strokeRect(card1.x,card1.y,card1.width,card1.height)
+    ctx.drawImage(defender1,0,0,194,194,0,5,194/2,194/2)
+    ctx.fillRect(card2.x,card2.y,card2.width,card2.height)
+    ctx.drawImage(defender2,0,0,194,194,80,5,194/2,194/2)
+    ctx.strokeStyle = card2stroke
+    ctx.strokeRect(card1.x,card1.y,card1.width,card1.height)
+
+
+}
 // floating messages
 const floatingMessages = []
 class floatingMessage{
@@ -214,6 +340,14 @@ function handleFloatingMessages (){
     }
 }
 // enemies 
+
+const enemyTypes = []
+const enemy1 = new Image ()
+enemy1.src= "enemy1.png"
+enemyTypes.push(enemy1)
+const enemy2 = new Image ()
+enemy2.src = "enemy2.png"
+enemyTypes.push(enemy2)
 class Enemy {
     constructor(verticalPosition){
         this.x = canvas.width;
@@ -222,20 +356,35 @@ class Enemy {
         this.height = cellSize -celdaEspacio*2;
         this.speed = Math.random()*0.2 + 0.4
         this.movement = this.speed;
-        this.health = 100;
+        this.health = 70;
         this.maxHealth= this.health;
+        this.enemyTypes = enemyTypes[Math.floor(Math.random()*enemyTypes.length)]
+        this.frameX = 0;
+        this.frameY = 0;
+        this.minFrame = 0;
+        this.maxFrame = 7
+        this.spriteHeight = 128
+        this.spriteWidth = 128
         
     }
 
     update(){
         this.x -= this.movement
+        if(frame % 10 === 0){
+            if (this.frameX < this.maxFrame)this.frameX++;
+            else this.frameX = this.minFrame;
+        } 
+ 
     }
     draw(){
-        ctx.fillStyle= 'red'
-        ctx.fillRect(this.x,this.y,this.width,this.height)
+//ctx.fillStyle= 'red'
+  //      ctx.fillRect(this.x,this.y,this.width,this.height)
         ctx.fillStyle = "black";
         ctx.font = '30px Orbitron';
         ctx.fillText(Math.floor(this.health),this.x + 15 ,this.y +30)
+        //ctx.drawImage(img,sx,sy,sh,dx,dy,dw,dh)
+        ctx.drawImage(this.enemyTypes,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height)
+    
     }
 }
 
@@ -249,7 +398,7 @@ function generateEnemies(){
         if (enemies[i].health <= 0){
             let gainedResources = enemies[i].maxHealth/10;
             floatingMessages.push(new floatingMessage("+"+ gainedResources,enemies[i].x,enemies[i].y,30,"black"))
-            floatingMessages.push(new floatingMessage("+"+ gainedResources,250,50,30,"gold"))
+            floatingMessages.push(new floatingMessage("+"+ gainedResources,470,85,30,"gold"))
 
             numberOfResources += gainedResources;
             score += gainedResources
@@ -297,7 +446,7 @@ function handleResources(){
         if (resources[i] && mouse.x && mouse.y && collision(resources[i],mouse)){
             numberOfResources += resources[i].amount;
             floatingMessages.push(new floatingMessage("+"+resources[i].amount,resources[i].x,resources[i].y,30,"black"))
-            floatingMessages.push(new floatingMessage("+" +resources[i].amount,250,50,20,"gold"))
+            floatingMessages.push(new floatingMessage("+" +resources[i].amount,470,85,30,"gold"))
 
             resources.splice(i,1)
             i--;
@@ -309,8 +458,8 @@ function handleResources(){
 function handleGameStatus (){
     ctx.fillStyle = 'gold'
     ctx.font = "30px Orbitron"
-    ctx.fillText(`Score: ` + score,20,35);
-    ctx.fillText(`Resources: ` + numberOfResources,20,80);
+    ctx.fillText(`Score: ` + score,180,35);
+    ctx.fillText(`Resources: ` + numberOfResources,180,80);
 
     if(gameOver){
         ctx.fillStyle = "black";
@@ -354,10 +503,10 @@ function animate(){
     handleDefenders()
     handleProjectiles ()
     generateEnemies()
+    chooseDefenders()
     handleResources ()
     handleGameStatus()
     handleFloatingMessages ()
-    
     frame ++;
    if (!gameOver) requestAnimationFrame(animate);
 }
@@ -377,4 +526,4 @@ function collision (first,second){
 window.addEventListener("resize",function(){
  canvasPosition = canvas.getBoundingClientRect();
 
-})
+})}
