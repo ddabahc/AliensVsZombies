@@ -27,8 +27,7 @@ const resources = []
 
 //Background
 
-const bg = new Image()
-bg.src = "bg.jpg"
+
 
 class Background{
     constructor(w,h){
@@ -36,12 +35,16 @@ class Background{
         this.y = 0
         this.width = w
         this.height = h
-        
+        this.image = new Image();
+        this.image.src = "bg.jpg"
     }
     draw(){
         ctx.drawImage(bg,this.x,this.y,this.width,this.height)
     }
+
+
 }
+const bg = new Background(canvas.width, canvas.height);
 
 //mouse
 const mouse = {
@@ -115,7 +118,7 @@ class Projectile{
         this.y = y
         this.width = 10
         this.height = 10;
-        this.power = 10
+        this.power = 15
         this.speed = 25
     }
     update(){
