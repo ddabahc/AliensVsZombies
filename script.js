@@ -1,7 +1,5 @@
 window.onload = function(){
 
-
-
 const canvas=document.getElementById("canvas1");
 const ctx = canvas.getContext ("2d");
 canvas.width = 900;
@@ -44,6 +42,7 @@ class Background{
 
 
 }
+
 const bg = new Background(canvas.width, canvas.height);
 
 //mouse
@@ -420,7 +419,7 @@ function generateEnemies(){
     }
 }
 // resources
-const amounts = [20,30,40]
+const amounts = [50,60,80]
 class Resource{
     constructor(){
         this.x = Math.random()* (canvas.width -cellSize)
@@ -439,7 +438,7 @@ class Resource{
     }
 }
 function handleResources(){
-    if(frame % 500 === 0 && score < winningScore ){
+    if(frame % 370 === 0 && score < winningScore ){
 
         resources.push(new Resource())
 
@@ -463,6 +462,7 @@ function handleGameStatus (){
     ctx.font = "30px Orbitron"
     ctx.fillText(`Score: ` + score,180,35);
     ctx.fillText(`Resources: ` + numberOfResources,180,80);
+    ctx.fillText("Defender Cost: 70",500,80)
 
     if(gameOver){
         ctx.fillStyle = "black";
@@ -473,7 +473,7 @@ function handleGameStatus (){
     if (score > winningScore && enemies.length === 0){
         ctx.fillStyle = "black";
         ctx.font = "60px Orbiton";
-        ctx.fillText("LEVEL COMPLETE",130,300);
+        ctx.fillText("You have saved the galaxy",130,300);
         ctx.font = "30px  Orbiton";
         ctx.fillText("You Win with " +score + " points",134,340)
     }
@@ -489,7 +489,7 @@ canvas.addEventListener("click",function(){
         if (defenders[i].x === gridPositionX && defenders [i].y === gridPositionY) return
     }
 
-    let defenderCost = 100
+    let defenderCost = 70
     if (numberOfResources >= defenderCost){
         defenders.push(new Defender(gridPositionX,gridPositionY))
         numberOfResources -= defenderCost;
@@ -530,3 +530,9 @@ window.addEventListener("resize",function(){
  canvasPosition = canvas.getBoundingClientRect();
 
 })}
+
+
+    document.querySelector("play-again").addEventListener("click",function(){
+        window.location.reload();
+        return false;
+    })
